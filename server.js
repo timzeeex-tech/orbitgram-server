@@ -1,4 +1,4 @@
-const userRoutes = require('./routes/users');equire('dotenv').config();
+const userRoutes = require('./routes/users');
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
