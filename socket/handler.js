@@ -10,7 +10,7 @@ module.exports = (io) => {
 
     socket.on('send_message', async (data) => {
       const { chatId, senderId, text } = data;
-      const msg = await Message.create({ chat: chatId, sender: senderId, text });
+      const msg = await Message.create({ chat: chatId, sender: senderId, text, image: data.image || null });
       const populatedMsg = await msg.populate('sender', 'username avatar isPremium starred');
       io.to(chatId).emit('new_message', populatedMsg);
     });

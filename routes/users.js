@@ -54,3 +54,16 @@ router.put('/profile', auth, async (req, res) => {
 });
 
 module.exports = router;
+// Сохранить настройки пользователя
+router.put('/settings', auth, async (req, res) => {
+  try {
+    const { settings } = req.body;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
+    user.settings = { ...user.settings, ...settings };
+    await user.save();
+    res.json({ settings: user.settings });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
