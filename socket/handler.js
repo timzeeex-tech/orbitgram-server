@@ -24,10 +24,27 @@ module.exports = (io) => {
     });
 
     // Отправка сообщения
-    socket.on('send_message', async (data) => {
-      const { chatId, senderId, text, image } = data;
-      const msg = await Message.create({ chat: chatId, sender: senderId, text, image: image || null });
-      const populatedMsg = await msg.populate('sender', 'username avatar isPremium starred lastSeen isOnline');
+socket.on('send_message', async (data) => {
+  const { chatId, senderId, text, image } = data;
+  const chat = await Chat.findById(chatId);
+  if (!chat) return;
+
+  // В канале писать может только создатель
+  if (chat.type === 'channel' && chat.creator.toString() !== senderId) {
+    return socket.emit('error', { message: 'В канале могут писать только создатели' });
+  }
+
+  const msg = await Message.create({ chat: chatId, sender: senderId, text, image: image || null });
+  const populatedMsg = await msg.populate('sender', 'username avatar isPremium starred lastSeen isOnline');
+
+  io.to(chatId).emit('new_message', populatedMsg);
+
+  // Уведомления участникам
+  chat.participants.forEach(async (pId) => {
+    if (pId.toString() !== senderId) {
+      io.to(pId.toString()).emit('new_message_notification', { chatId, message: populatedMsg });
+    }
+  });
 
       io.to(chatId).emit('new_message', populatedMsg);
 
