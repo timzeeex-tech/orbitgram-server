@@ -8,7 +8,10 @@ const userSchema = new mongoose.Schema({
   premiumExpires: { type: Date, default: () => new Date(Date.now() + 30*24*60*60*1000) },
   starred: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now },
-  settings: {   // пользовательские настройки
+  lastSeen: { type: Date, default: Date.now },
+  isOnline: { type: Boolean, default: false },
+  pushToken: { type: String, default: null },
+  settings: {
     theme: { type: String, default: 'dark' },
     fontSize: { type: Number, default: 14 },
     vibration: { type: Boolean, default: true },
