@@ -38,6 +38,9 @@ router.put('/profile', auth, async (req, res) => {
     }
     if (avatar !== undefined) {
       user.avatar = avatar;
+      if (bio !== undefined) user.bio = bio;
+if (status !== undefined) user.status = status;
+if (coverColor !== undefined) user.coverColor = coverColor;
     }
     await user.save();
     res.json({
