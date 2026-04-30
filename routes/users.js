@@ -9,7 +9,7 @@ router.get('/search', auth, async (req, res) => {
     if (!query || query.trim().length === 0) {
       return res.json([]);
     }
-    const regex = new RegExp(query.trim(), 'i'); // нечувствительный к регистру
+    const regex = new RegExp(query.trim(), 'i');
     const users = await User.find({
       _id: { $ne: req.user.id },
       username: { $regex: regex }
@@ -29,7 +29,6 @@ router.put('/profile', auth, async (req, res) => {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
 
-    // Если меняем юзернейм, проверяем уникальность
     if (username && username !== user.username) {
       const exists = await User.findOne({ username });
       if (exists) {
