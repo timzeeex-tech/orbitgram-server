@@ -6,13 +6,12 @@ module.exports = (io) => {
   io.on('connection', (socket) => {
     console.log('🟢 Подключился:', socket.id);
 
-    // Сохраняем ID юзера при подключении
+    // Регистрация пользователя в сокете
     socket.on('register', async (userId) => {
       if (!userId) return;
       socket.userId = userId;
-      socket.join(userId); // персональная комната для уведомлений
+      socket.join(userId);
 
-      // Обновляем онлайн-статус
       await User.findByIdAndUpdate(userId, { isOnline: true, lastSeen: new Date() });
       io.emit('user_online', { userId, isOnline: true, lastSeen: new Date() });
     });
@@ -24,46 +23,33 @@ module.exports = (io) => {
     });
 
     // Отправка сообщения
-socket.on('send_message', async (data) => {
-  const { chatId, senderId, text, image } = data;
-  const chat = await Chat.findById(chatId);
-  if (!chat) return;
+    socket.on('send_message', async (data) => {
+      const { chatId, senderId, text, image } = data;
+      try {
+        const currentChat = await Chat.findById(chatId);
+        if (!currentChat) return;
 
-  // В канале писать может только создатель
-  if (chat.type === 'channel' && chat.creator.toString() !== senderId) {
-    return socket.emit('error', { message: 'В канале могут писать только создатели' });
-  }
+        // В канале писать может только создатель
+        if (currentChat.type === 'channel' && currentChat.creator.toString() !== senderId) {
+          return socket.emit('error', { message: 'В канале могут писать только создатели' });
+        }
 
-  const msg = await Message.create({ chat: chatId, sender: senderId, text, image: image || null });
-  const populatedMsg = await msg.populate('sender', 'username avatar isPremium starred lastSeen isOnline');
+        const msg = await Message.create({ chat: chatId, sender: senderId, text, image: image || null });
+        const populatedMsg = await msg.populate('sender', 'username avatar isPremium starred lastSeen isOnline');
 
-  io.to(chatId).emit('new_message', populatedMsg);
+        io.to(chatId).emit('new_message', populatedMsg);
 
-  // Уведомления участникам
-  chat.participants.forEach(async (pId) => {
-    if (pId.toString() !== senderId) {
-      io.to(pId.toString()).emit('new_message_notification', { chatId, message: populatedMsg });
-    }
-  });
-
-      io.to(chatId).emit('new_message', populatedMsg);
-
-      // Отправляем уведомление получателю
-      const chat = await Chat.findById(chatId);
-      if (chat) {
-        const receiverIds = chat.participants.filter(p => p.toString() !== senderId);
-        receiverIds.forEach(async (receiverId) => {
-          const user = await User.findById(receiverId);
-          if (user && user.pushToken) {
-            // Отправляем пуш через Expo Push API (заглушка, для реальной работы нужен Expo access token)
-            // Но мы сделаем через сокет-уведомление, которое клиент сам обернёт в локальное уведомление.
+        // Уведомления участникам
+        currentChat.participants.forEach(async (pId) => {
+          if (pId.toString() !== senderId) {
+            io.to(pId.toString()).emit('new_message_notification', {
+              chatId,
+              message: populatedMsg
+            });
           }
-          // Отправляем сокет-событие "new_message_notification" в комнату получателя
-          io.to(receiverId).emit('new_message_notification', {
-            chatId,
-            message: populatedMsg
-          });
         });
+      } catch (err) {
+        console.error('Ошибка отправки сообщения:', err);
       }
     });
 
