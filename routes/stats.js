@@ -13,3 +13,15 @@ router.get('/weekly', auth, async (req, res) => {
 });
 
 module.exports = router;
+// Получить прямой чат с пользователем, если существует
+router.get('/direct/:userId', auth, async (req, res) => {
+  try {
+    const chat = await Chat.findOne({
+      type: 'direct',
+      participants: { $all: [req.user.id, req.params.userId] }
+    }).populate('participants', 'username avatar');
+    res.json(chat || null);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});

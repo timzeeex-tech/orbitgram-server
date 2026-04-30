@@ -48,7 +48,10 @@ router.put('/profile', auth, async (req, res) => {
       isPremium: user.isPremium,
       starred: user.starred,
       premiumExpires: user.premiumExpires,
-      createdAt: user.createdAt
+      subscription: user.subscription,
+      createdAt: user.createdAt,
+      blockedUsers: user.blockedUsers,
+      showOnline: user.showOnline,
     });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -63,31 +66,32 @@ router.put('/settings', auth, async (req, res) => {
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
     user.settings = { ...user.settings, ...settings };
     await user.save();
-    res.json({ settings: user.settings });
+    res.json({ settings: user.settings, showOnline: user.showOnline });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-// Получить профиль любого пользователя по ID
+// Получить профиль пользователя по ID
 router.get('/:userId', auth, async (req, res) => {
   try {
     const user = await User.findById(req.params.userId)
-      .select('username avatar bio status coverColor isPremium starred createdAt');
+      .select('username avatar bio status coverColor isPremium starred createdAt blockedUsers');
     if (!user) return res.status(404).json({ error: 'Не найден' });
-    res.json(user);
+    // Передаём, заблокирован ли этот пользователь текущим
+    const currentUser = await User.findById(req.user.id);
+    const isBlocked = currentUser.blockedUsers.includes(user._id);
+    res.json({ ...user.toObject(), blockedBy: currentUser.blockedUsers, isBlocked });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-module.exports = router;
-// Заблокировать пользователя
+// Блокировка / разблокировка
 router.post('/block/:userId', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ error: 'Не найден' });
-    if (!user.blockedUsers) user.blockedUsers = [];
     if (!user.blockedUsers.includes(req.params.userId)) {
       user.blockedUsers.push(req.params.userId);
       await user.save();
@@ -98,15 +102,16 @@ router.post('/block/:userId', auth, async (req, res) => {
   }
 });
 
-// Разблокировать
 router.delete('/block/:userId', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ error: 'Не найден' });
-    user.blockedUsers = (user.blockedUsers || []).filter(id => id.toString() !== req.params.userId);
+    user.blockedUsers = user.blockedUsers.filter(id => id.toString() !== req.params.userId);
     await user.save();
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
+
+module.exports = router;
