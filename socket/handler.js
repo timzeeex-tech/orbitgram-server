@@ -5,6 +5,14 @@ const Chat = require('../models/Chat');
 module.exports = (io) => {
   io.on('connection', (socket) => {
     console.log('🟢 Подключился:', socket.id);
+    // Уведомление о новом чате (когда кто-то написал первый раз)
+socket.on('new_chat_created', (chat) => {
+  chat.participants.forEach(pId => {
+    if (pId.toString() !== socket.userId) {
+      io.to(pId.toString()).emit('new_chat', chat);
+    }
+  });
+});
 
     // Регистрация пользователя в сокете
     socket.on('register', async (userId) => {
@@ -31,6 +39,12 @@ module.exports = (io) => {
       try {
         const currentChat = await Chat.findById(chatId);
         if (!currentChat) return;
+        // Внутри send_message после создания сообщения:
+const msgCount = await Message.countDocuments({ chat: chatId });
+if (msgCount === 1) {
+  // это первое сообщение — уведомим получателя о новом чате
+  socket.emit('new_chat_created', currentChat);
+}
 
         // В канале писать может только создатель
         if (currentChat.type === 'channel' && currentChat.creator.toString() !== senderId) {

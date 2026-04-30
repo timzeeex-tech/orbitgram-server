@@ -82,3 +82,32 @@ router.get('/:userId', auth, async (req, res) => {
 });
 
 module.exports = router;
+// Заблокировать пользователя
+router.post('/block/:userId', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'Не найден' });
+    if (!user.blockedUsers) user.blockedUsers = [];
+    if (!user.blockedUsers.includes(req.params.userId)) {
+      user.blockedUsers.push(req.params.userId);
+      await user.save();
+    }
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Разблокировать
+router.delete('/block/:userId', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'Не найден' });
+    user.blockedUsers = (user.blockedUsers || []).filter(id => id.toString() !== req.params.userId);
+    await user.save();
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]

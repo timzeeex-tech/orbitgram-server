@@ -10,6 +10,8 @@ const messageRoutes = require('./routes/messages');
 const storyRoutes = require('./routes/stories');
 const socketHandler = require('./socket/handler');
 const User = require('./models/User');
+const subscriptionRoutes = require('./routes/subscription');
+const statsRoutes = require('./routes/stats');
 
 const app = express();
 app.use(cors());
@@ -20,6 +22,8 @@ app.use('/api/chats', chatRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/stories', storyRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/subscription', subscriptionRoutes);
+app.use('/api/users/stats', statsRoutes);
 
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
