@@ -110,4 +110,3 @@ router.delete('/block/:userId', auth, async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
-blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]

@@ -19,6 +19,7 @@ const userSchema = new mongoose.Schema({
   isOnline: { type: Boolean, default: false },
   pushToken: { type: String, default: null },
   showOnline: { type: Boolean, default: true },
+  blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   settings: {
     theme: { type: String, default: 'dark' },
     fontSize: { type: Number, default: 14 },
