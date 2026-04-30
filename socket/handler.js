@@ -10,10 +10,13 @@ module.exports = (io) => {
     socket.on('register', async (userId) => {
       if (!userId) return;
       socket.userId = userId;
-      socket.join(userId);
+      socket.join(userId); // персональная комната для уведомлений
 
-      await User.findByIdAndUpdate(userId, { isOnline: true, lastSeen: new Date() });
-      io.emit('user_online', { userId, isOnline: true, lastSeen: new Date() });
+      const currentUser = await User.findById(userId);
+      if (currentUser && currentUser.showOnline !== false) {
+        await User.findByIdAndUpdate(userId, { isOnline: true, lastSeen: new Date() });
+        io.emit('user_online', { userId, isOnline: true, lastSeen: new Date() });
+      }
     });
 
     // Присоединение к комнате чата
@@ -23,41 +26,8 @@ module.exports = (io) => {
     });
 
     // Отправка сообщения
-socket.on('send_message', async (data) => {
-  const { chatId, senderId, text, image, video, audio, sticker } = data;
-  try {
-    const currentChat = await Chat.findById(chatId);
-    if (!currentChat) return;
-
-    if (currentChat.type === 'channel' && currentChat.creator.toString() !== senderId) {
-      return socket.emit('error', { message: 'В канале могут писать только создатели' });
-    }
-
-    const msg = await Message.create({
-      chat: chatId,
-      sender: senderId,
-      text,
-      image: image || null,
-      video: video || null,
-      audio: audio || null,
-      sticker: sticker || null
-    });
-    const populatedMsg = await msg.populate('sender', 'username avatar isPremium starred lastSeen isOnline');
-
-    io.to(chatId).emit('new_message', populatedMsg);
-
-    currentChat.participants.forEach(async (pId) => {
-      if (pId.toString() !== senderId) {
-        io.to(pId.toString()).emit('new_message_notification', {
-          chatId,
-          message: populatedMsg
-        });
-      }
-    });
-  } catch (err) {
-    console.error('send_message error:', err);
-  }
-      const { chatId, senderId, text, image } = data;
+    socket.on('send_message', async (data) => {
+      const { chatId, senderId, text, image, video, audio, sticker } = data;
       try {
         const currentChat = await Chat.findById(chatId);
         if (!currentChat) return;
@@ -67,7 +37,15 @@ socket.on('send_message', async (data) => {
           return socket.emit('error', { message: 'В канале могут писать только создатели' });
         }
 
-        const msg = await Message.create({ chat: chatId, sender: senderId, text, image: image || null });
+        const msg = await Message.create({
+          chat: chatId,
+          sender: senderId,
+          text,
+          image: image || null,
+          video: video || null,
+          audio: audio || null,
+          sticker: sticker || null,
+        });
         const populatedMsg = await msg.populate('sender', 'username avatar isPremium starred lastSeen isOnline');
 
         io.to(chatId).emit('new_message', populatedMsg);
@@ -77,7 +55,7 @@ socket.on('send_message', async (data) => {
           if (pId.toString() !== senderId) {
             io.to(pId.toString()).emit('new_message_notification', {
               chatId,
-              message: populatedMsg
+              message: populatedMsg,
             });
           }
         });
@@ -94,8 +72,11 @@ socket.on('send_message', async (data) => {
     // Отключение
     socket.on('disconnect', async () => {
       if (socket.userId) {
-        await User.findByIdAndUpdate(socket.userId, { isOnline: false, lastSeen: new Date() });
-        io.emit('user_online', { userId: socket.userId, isOnline: false, lastSeen: new Date() });
+        const currentUser = await User.findById(socket.userId);
+        if (currentUser && currentUser.showOnline !== false) {
+          await User.findByIdAndUpdate(socket.userId, { isOnline: false, lastSeen: new Date() });
+          io.emit('user_online', { userId: socket.userId, isOnline: false, lastSeen: new Date() });
+        }
       }
       console.log('🔴 Отключился:', socket.id);
     });
