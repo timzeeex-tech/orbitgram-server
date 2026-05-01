@@ -23,24 +23,29 @@ module.exports = (io) => {
       console.log(`${socket.id} в комнате ${chatId}`);
     });
 
+    socket.on('read_chat', async ({ chatId, userId }) => {
+      // Помечаем все непрочитанные сообщения от других как прочитанные
+      try {
+        const unreadMessages = await Message.find({
+          chat: chatId,
+          sender: { $ne: userId },
+          readBy: { $ne: userId }
+        });
+        for (const msg of unreadMessages) {
+          msg.readBy.push(userId);
+          await msg.save();
+        }
+        io.to(chatId).emit('chat_read', { chatId, userId });
+      } catch (e) {
+        console.error('read_chat error:', e);
+      }
+    });
+
     socket.on('send_message', async (data) => {
-      const { chatId, senderId, text, image, video, audio, sticker } = data;
+      const { chatId, senderId, text, image, video, audio, sticker, replyTo } = data;
       try {
         const currentChat = await Chat.findById(chatId);
         if (!currentChat) return;
-        const msg = await Message.create({
-  chat: chatId,
-  sender: senderId,
-  text,
-  image: image || null,
-  video: video || null,
-  audio: audio || null,
-  sticker: sticker || null,
-  replyTo: data.replyTo || null,
-  edited: false,
-});
-const populatedMsg = await msg.populate('sender', 'username avatar isPremium starred lastSeen isOnline');
-await populatedMsg.populate('replyTo');
 
         // Проверка блокировки
         const receiverId = currentChat.participants.find(p => p.toString() !== senderId);
@@ -55,7 +60,7 @@ await populatedMsg.populate('replyTo');
           return socket.emit('error', { message: 'В канале могут писать только создатели' });
         }
 
-        const msg = await Message.create({
+        const newMessage = await Message.create({
           chat: chatId,
           sender: senderId,
           text,
@@ -63,29 +68,33 @@ await populatedMsg.populate('replyTo');
           video: video || null,
           audio: audio || null,
           sticker: sticker || null,
+          replyTo: replyTo || null,
+          edited: false,
+          readBy: [senderId], // отправитель уже прочитал
         });
-        const populatedMsg = await msg.populate('sender', 'username avatar isPremium starred lastSeen isOnline');
 
-        io.to(chatId).emit('new_message', populatedMsg);
+        await newMessage.populate('sender', 'username avatar isPremium starred lastSeen isOnline');
+        await newMessage.populate('replyTo');
+
+        io.to(chatId).emit('new_message', newMessage);
 
         // Если это первое сообщение в чате — уведомим о новом чате
         const msgCount = await Message.countDocuments({ chat: chatId });
         if (msgCount === 1) {
-          io.to(currentChat.participants.map(p => p.toString())).emit('new_chat', {
-            ...currentChat.toObject(),
-            participants: currentChat.participants,
-          });
+          const chatObj = currentChat.toObject();
+          chatObj.participants = currentChat.participants;
+          io.to(chatObj.participants.map(p => p.toString())).emit('new_chat', chatObj);
         }
 
         // Уведомления участникам
-        currentChat.participants.forEach(async (pId) => {
+        for (const pId of currentChat.participants) {
           if (pId.toString() !== senderId) {
             io.to(pId.toString()).emit('new_message_notification', {
               chatId,
-              message: populatedMsg,
+              message: newMessage,
             });
           }
-        });
+        }
       } catch (err) {
         console.error('Ошибка отправки сообщения:', err);
       }
