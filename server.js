@@ -35,11 +35,16 @@ mongoose.connect(process.env.MONGO_URI)
     console.log('MongoDB подключена');
     const orbitExists = await User.findOne({ username: 'Orbitgram' });
     if (!orbitExists) {
-      await new User({ username: 'Orbitgram', passwordHash: 'not_needed', isPremium: false, starred: false }).save();
-      console.log('Создан аккаунт Orbitgram');
+      await new User({
+        username: 'Orbitgram',
+        passwordHash: 'not_needed',
+        isPremium: false,
+        starred: false
+      }).save();
+      console.log('Создан официальный аккаунт Orbitgram');
     }
   })
-  .catch(err => console.error('MongoDB ошибка:', err));
+  .catch(err => console.error('Ошибка MongoDB:', err));
 
 socketHandler(io);
 

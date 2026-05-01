@@ -13,10 +13,17 @@ router.post('/signup', async (req, res) => {
     const hash = await bcrypt.hash(password, 10);
     const user = new User({ username, passwordHash: hash, phone });
     await user.save();
+
+    // Создаём чат с Orbitgram
     const orbit = await User.findOne({ username: 'Orbitgram' });
     if (orbit) {
-      await new Chat({ type: 'direct', participants: [user._id, orbit._id], isOfficial: true }).save();
+      await new Chat({
+        type: 'direct',
+        participants: [user._id, orbit._id],
+        isOfficial: true
+      }).save();
     }
+
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
     res.json({ token, user: { id: user._id, username, ...user.toObject(), passwordHash: undefined } });
   } catch (e) { res.status(400).json({ error: e.message }); }
@@ -35,7 +42,6 @@ router.post('/login', async (req, res) => {
     user.twoFactorExpires = new Date(Date.now() + 5 * 60 * 1000);
     await user.save();
 
-    // Отправка кода в официальный чат (основной способ)
     const orbitUser = await User.findOne({ username: 'Orbitgram' });
     if (orbitUser) {
       const officialChat = await Chat.findOne({ participants: { $all: [user._id, orbitUser._id] } });
