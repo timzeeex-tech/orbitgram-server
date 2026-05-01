@@ -52,21 +52,32 @@ router.put('/profile', auth, async (req, res) => {
       createdAt: user.createdAt,
       blockedUsers: user.blockedUsers,
       showOnline: user.showOnline,
+      twoFactorEnabled: user.twoFactorEnabled,
     });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-// Сохранить настройки
+// Сохранить настройки (включая 2FA)
 router.put('/settings', auth, async (req, res) => {
   try {
-    const { settings } = req.body;
+    const { settings, twoFactorEnabled } = req.body;
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
-    user.settings = { ...user.settings, ...settings };
+
+    if (settings) {
+      user.settings = { ...user.settings, ...settings };
+    }
+    if (twoFactorEnabled !== undefined) {
+      user.twoFactorEnabled = twoFactorEnabled;
+    }
     await user.save();
-    res.json({ settings: user.settings, showOnline: user.showOnline });
+    res.json({
+      settings: user.settings,
+      showOnline: user.showOnline,
+      twoFactorEnabled: user.twoFactorEnabled,
+    });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
@@ -78,7 +89,6 @@ router.get('/:userId', auth, async (req, res) => {
     const user = await User.findById(req.params.userId)
       .select('username avatar bio status coverColor isPremium starred createdAt blockedUsers');
     if (!user) return res.status(404).json({ error: 'Не найден' });
-    // Передаём, заблокирован ли этот пользователь текущим
     const currentUser = await User.findById(req.user.id);
     const isBlocked = currentUser.blockedUsers.includes(user._id);
     res.json({ ...user.toObject(), blockedBy: currentUser.blockedUsers, isBlocked });
