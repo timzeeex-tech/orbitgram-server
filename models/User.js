@@ -24,8 +24,10 @@ const userSchema = new mongoose.Schema({
   twoFactorEnabled: { type: Boolean, default: false },
   twoFactorCode: { type: String, default: null },
   twoFactorExpires: { type: Date, default: null },
+  email: { type: String, default: '' },
+  twoFactorMethod: { type: String, enum: ['chat', 'email'], default: 'chat' },
   settings: {
-    theme: { type: String, default: 'dark' },
+    theme: { type: String, default: 'soft' },
     fontSize: { type: Number, default: 14 },
     vibration: { type: Boolean, default: true },
     sound: { type: Boolean, default: true },

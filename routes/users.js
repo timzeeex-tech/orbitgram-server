@@ -20,10 +20,10 @@ router.get('/search', auth, async (req, res) => {
   }
 });
 
-// Обновление профиля
+// Обновление профиля (теперь включает email и twoFactorMethod)
 router.put('/profile', auth, async (req, res) => {
   try {
-    const { username, avatar, bio, status, coverColor } = req.body;
+    const { username, avatar, bio, status, coverColor, email, twoFactorMethod } = req.body;
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
 
@@ -36,6 +36,8 @@ router.put('/profile', auth, async (req, res) => {
     if (bio !== undefined) user.bio = bio;
     if (status !== undefined) user.status = status;
     if (coverColor !== undefined) user.coverColor = coverColor;
+    if (email !== undefined) user.email = email;
+    if (twoFactorMethod !== undefined) user.twoFactorMethod = twoFactorMethod;
 
     await user.save();
     res.json({
@@ -45,6 +47,8 @@ router.put('/profile', auth, async (req, res) => {
       bio: user.bio,
       status: user.status,
       coverColor: user.coverColor,
+      email: user.email,
+      twoFactorMethod: user.twoFactorMethod,
       isPremium: user.isPremium,
       starred: user.starred,
       premiumExpires: user.premiumExpires,
@@ -59,7 +63,7 @@ router.put('/profile', auth, async (req, res) => {
   }
 });
 
-// Сохранить настройки (включая 2FA)
+// Сохранить настройки (включая twoFactorEnabled)
 router.put('/settings', auth, async (req, res) => {
   try {
     const { settings, twoFactorEnabled } = req.body;
@@ -87,7 +91,7 @@ router.put('/settings', auth, async (req, res) => {
 router.get('/:userId', auth, async (req, res) => {
   try {
     const user = await User.findById(req.params.userId)
-      .select('username avatar bio status coverColor isPremium starred createdAt blockedUsers');
+      .select('username avatar bio status coverColor isPremium starred createdAt blockedUsers email');
     if (!user) return res.status(404).json({ error: 'Не найден' });
     const currentUser = await User.findById(req.user.id);
     const isBlocked = currentUser.blockedUsers.includes(user._id);
