@@ -4,7 +4,7 @@ const User = require('../models/User');
 
 router.post('/upgrade', auth, async (req, res) => {
   try {
-    const { type } = req.body;
+    const { type } = req.body; // 'premium' или 'ultra'
     if (!['premium', 'ultra'].includes(type)) {
       return res.status(400).json({ error: 'Неверный тип подписки' });
     }
@@ -15,7 +15,10 @@ router.post('/upgrade', auth, async (req, res) => {
     const currentExpiry = user.subscription?.expiresAt || now;
     const newExpiry = new Date(Math.max(currentExpiry, now) + 30 * 24 * 60 * 60 * 1000);
 
-    user.subscription = { type, expiresAt: newExpiry };
+    user.subscription = {
+      type,
+      expiresAt: newExpiry,
+    };
     user.starred = type !== 'starter';
     await user.save();
 
