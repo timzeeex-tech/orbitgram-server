@@ -12,6 +12,7 @@ const socketHandler = require('./socket/handler');
 const User = require('./models/User');
 const subscriptionRoutes = require('./routes/subscription');
 const statsRoutes = require('./routes/stats');
+const friendsRoutes = require('./routes/friends');
 
 const app = express();
 app.use(cors());
@@ -24,6 +25,8 @@ app.use('/api/stories', storyRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/subscription', subscriptionRoutes);
 app.use('/api/users/stats', statsRoutes);
+app.use('/api/friends', friendsRoutes);
+app.use('/api/friends', require('./routes/friends'));
 
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });

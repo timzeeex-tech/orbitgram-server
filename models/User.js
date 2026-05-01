@@ -20,6 +20,10 @@ const userSchema = new mongoose.Schema({
   pushToken: { type: String, default: null },
   showOnline: { type: Boolean, default: true },
   blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  friends: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  twoFactorEnabled: { type: Boolean, default: false },
+  twoFactorCode: { type: String, default: null },
+  twoFactorExpires: { type: Date, default: null },
   settings: {
     theme: { type: String, default: 'dark' },
     fontSize: { type: Number, default: 14 },

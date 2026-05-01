@@ -9,12 +9,13 @@ const messageSchema = new mongoose.Schema({
   sticker: String,
   replyTo: { type: mongoose.Schema.Types.ObjectId, ref: 'Message', default: null },
   edited: { type: Boolean, default: false },
+  forwardedFrom: { type: mongoose.Schema.Types.ObjectId, ref: 'Message', default: null },
   reactions: [{
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     emoji: String,
     createdAt: { type: Date, default: Date.now }
   }],
+  readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   createdAt: { type: Date, default: Date.now }
 });
 module.exports = mongoose.model('Message', messageSchema);
-readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
