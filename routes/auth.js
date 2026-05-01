@@ -35,11 +35,12 @@ router.post('/login', async (req, res) => {
     user.twoFactorExpires = new Date(Date.now() + 5 * 60 * 1000);
     await user.save();
 
+    // Отправка кода в официальный чат (основной способ)
     const orbitUser = await User.findOne({ username: 'Orbitgram' });
     if (orbitUser) {
       const officialChat = await Chat.findOne({ participants: { $all: [user._id, orbitUser._id] } });
       if (officialChat) {
-        await Message.create({ chat: officialChat._id, sender: orbitUser._id, text: `Ваш код для входа: ${code}. Никому не сообщайте его.` });
+        await Message.create({ chat: officialChat._id, sender: orbitUser._id, text: `Ваш код для входа: ${code}` });
         const io = req.app.get('io');
         io.to(user._id.toString()).emit('new_message', { chatId: officialChat._id, message: { text: `Код: ${code}` } });
       }

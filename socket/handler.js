@@ -34,41 +34,41 @@ module.exports = (io) => {
       try {
         const currentChat = await Chat.findById(chatId);
         if (!currentChat) return;
-
+        // Блокировка
         const receiverId = currentChat.participants.find(p => p.toString() !== senderId);
         if (receiverId) {
           const receiver = await User.findById(receiverId);
           if (receiver && receiver.blockedUsers.includes(senderId)) {
-            return socket.emit('error', { message: 'Вы заблокированы этим пользователем' });
+            return socket.emit('error', { message: 'Вы заблокированы' });
           }
         }
         if (currentChat.type === 'channel' && currentChat.creator.toString() !== senderId) {
-          return socket.emit('error', { message: 'Только создатель может писать' });
+          return socket.emit('error', { message: 'В канале пишет только создатель' });
         }
 
-        const msg = await Message.create({
+        const message = await Message.create({
           chat: chatId, sender: senderId, text: text || null,
           image: image || null, video: video || null, audio: audio || null,
           sticker: sticker || null, replyTo: replyTo || null,
-          forwardedFrom: forwardedFrom || null,
-          readBy: [senderId],
+          forwardedFrom: forwardedFrom || null, readBy: [senderId],
         });
-        await msg.populate('sender', 'username avatar isPremium starred lastSeen isOnline');
-        await msg.populate('replyTo');
-        await msg.populate('forwardedFrom');
+        await message.populate('sender', 'username avatar isPremium starred isOnline');
+        await message.populate('replyTo');
+        await message.populate('forwardedFrom');
 
-        io.to(chatId).emit('new_message', msg);
+        io.to(chatId).emit('new_message', message);
 
-        const msgCount = await Message.countDocuments({ chat: chatId });
-        if (msgCount === 1) {
-          io.to(currentChat.participants.map(p => p.toString())).emit('new_chat', currentChat.toObject());
+        // Первое сообщение -> уведомить о новом чате
+        if (await Message.countDocuments({ chat: chatId }) === 1) {
+          io.to(currentChat.participants.map(p => p.toString())).emit('new_chat', currentChat);
         }
+
         for (const pId of currentChat.participants) {
           if (pId.toString() !== senderId) {
-            io.to(pId.toString()).emit('new_message_notification', { chatId, message: msg });
+            io.to(pId.toString()).emit('new_message_notification', { chatId, message });
           }
         }
-      } catch (err) { console.error('Ошибка отправки сообщения:', err); }
+      } catch (err) { console.error('send_message error:', err); }
     });
 
     socket.on('typing', ({ chatId, userId, isTyping }) => socket.to(chatId).emit('user_typing', { userId, isTyping }));

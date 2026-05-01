@@ -8,19 +8,14 @@ router.get('/search', auth, async (req, res) => {
     const { query } = req.query;
     if (!query || query.trim().length === 0) return res.json([]);
     const regex = new RegExp(query.trim(), 'i');
-    const users = await User.find({
-      _id: { $ne: req.user.id },
-      username: { $regex: regex }
-    })
-    .select('username avatar isPremium starred bio status coverColor createdAt')
-    .limit(20);
+    const users = await User.find({ _id: { $ne: req.user.id }, username: { $regex: regex } })
+      .select('username avatar isPremium starred bio status coverColor createdAt')
+      .limit(20);
     res.json(users);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Обновление профиля (теперь включает email и twoFactorMethod)
+// Обновление профиля
 router.put('/profile', auth, async (req, res) => {
   try {
     const { username, avatar, bio, status, coverColor, email, twoFactorMethod } = req.body;
@@ -41,53 +36,31 @@ router.put('/profile', auth, async (req, res) => {
 
     await user.save();
     res.json({
-      id: user._id,
-      username: user.username,
-      avatar: user.avatar,
-      bio: user.bio,
-      status: user.status,
-      coverColor: user.coverColor,
-      email: user.email,
-      twoFactorMethod: user.twoFactorMethod,
-      isPremium: user.isPremium,
-      starred: user.starred,
-      premiumExpires: user.premiumExpires,
-      subscription: user.subscription,
-      createdAt: user.createdAt,
-      blockedUsers: user.blockedUsers,
-      showOnline: user.showOnline,
-      twoFactorEnabled: user.twoFactorEnabled,
+      id: user._id, username: user.username, avatar: user.avatar,
+      bio: user.bio, status: user.status, coverColor: user.coverColor,
+      email: user.email, twoFactorMethod: user.twoFactorMethod,
+      isPremium: user.isPremium, starred: user.starred,
+      premiumExpires: user.premiumExpires, subscription: user.subscription,
+      createdAt: user.createdAt, blockedUsers: user.blockedUsers,
+      showOnline: user.showOnline, twoFactorEnabled: user.twoFactorEnabled,
     });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Сохранить настройки (включая twoFactorEnabled)
+// Настройки
 router.put('/settings', auth, async (req, res) => {
   try {
     const { settings, twoFactorEnabled } = req.body;
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
-
-    if (settings) {
-      user.settings = { ...user.settings, ...settings };
-    }
-    if (twoFactorEnabled !== undefined) {
-      user.twoFactorEnabled = twoFactorEnabled;
-    }
+    if (settings) user.settings = { ...user.settings, ...settings };
+    if (twoFactorEnabled !== undefined) user.twoFactorEnabled = twoFactorEnabled;
     await user.save();
-    res.json({
-      settings: user.settings,
-      showOnline: user.showOnline,
-      twoFactorEnabled: user.twoFactorEnabled,
-    });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+    res.json({ settings: user.settings, showOnline: user.showOnline, twoFactorEnabled: user.twoFactorEnabled });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Получить профиль пользователя по ID
+// Получить чужой профиль
 router.get('/:userId', auth, async (req, res) => {
   try {
     const user = await User.findById(req.params.userId)
@@ -96,12 +69,10 @@ router.get('/:userId', auth, async (req, res) => {
     const currentUser = await User.findById(req.user.id);
     const isBlocked = currentUser.blockedUsers.includes(user._id);
     res.json({ ...user.toObject(), blockedBy: currentUser.blockedUsers, isBlocked });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Блокировка / разблокировка
+// Блокировка
 router.post('/block/:userId', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -111,9 +82,7 @@ router.post('/block/:userId', auth, async (req, res) => {
       await user.save();
     }
     res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 router.delete('/block/:userId', auth, async (req, res) => {
@@ -123,9 +92,7 @@ router.delete('/block/:userId', auth, async (req, res) => {
     user.blockedUsers = user.blockedUsers.filter(id => id.toString() !== req.params.userId);
     await user.save();
     res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 module.exports = router;
