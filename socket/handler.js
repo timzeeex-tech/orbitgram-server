@@ -28,6 +28,19 @@ module.exports = (io) => {
       try {
         const currentChat = await Chat.findById(chatId);
         if (!currentChat) return;
+        const msg = await Message.create({
+  chat: chatId,
+  sender: senderId,
+  text,
+  image: image || null,
+  video: video || null,
+  audio: audio || null,
+  sticker: sticker || null,
+  replyTo: data.replyTo || null,
+  edited: false,
+});
+const populatedMsg = await msg.populate('sender', 'username avatar isPremium starred lastSeen isOnline');
+await populatedMsg.populate('replyTo');
 
         // Проверка блокировки
         const receiverId = currentChat.participants.find(p => p.toString() !== senderId);

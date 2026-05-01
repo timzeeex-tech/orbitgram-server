@@ -8,6 +8,7 @@ router.get('/:chatId', auth, async (req, res) => {
   try {
     const messages = await Message.find({ chat: req.params.chatId })
       .populate('sender', 'username avatar isPremium starred')
+      .populate('replyTo')
       .sort({ createdAt: 1 });
     res.json(messages);
   } catch (e) {
@@ -65,6 +66,32 @@ router.delete('/:messageId', auth, async (req, res) => {
     }
 
     res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Редактировать сообщение (только своё)
+router.put('/:messageId', auth, async (req, res) => {
+  try {
+    const { text } = req.body;
+    const message = await Message.findById(req.params.messageId);
+    if (!message) return res.status(404).json({ error: 'Сообщение не найдено' });
+    if (message.sender.toString() !== req.user.id) {
+      return res.status(403).json({ error: 'Можно редактировать только свои сообщения' });
+    }
+    message.text = text;
+    message.edited = true;
+    await message.save();
+    await message.populate('sender', 'username avatar isPremium starred');
+    await message.populate('replyTo');
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(message.chat.toString()).emit('message_edited', message);
+    }
+
+    res.json(message);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
