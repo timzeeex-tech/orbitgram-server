@@ -1,4 +1,4 @@
-const userRoutes = require('./routes/users');
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -8,26 +8,22 @@ const authRoutes = require('./routes/auth');
 const chatRoutes = require('./routes/chats');
 const messageRoutes = require('./routes/messages');
 const storyRoutes = require('./routes/stories');
-const socketHandler = require('./socket/handler');
-const User = require('./models/User');
-const subscriptionRoutes = require('./routes/subscription');
-const statsRoutes = require('./routes/stats');
+const userRoutes = require('./routes/users');
 const friendsRoutes = require('./routes/friends');
 const subscriptionRoutes = require('./routes/subscription');
+const socketHandler = require('./socket/handler');
+const User = require('./models/User');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/chats', chatRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/stories', storyRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/subscription', subscriptionRoutes);
-app.use('/api/users/stats', statsRoutes);
 app.use('/api/friends', friendsRoutes);
-app.use('/api/friends', require('./routes/friends'));
 app.use('/api/subscription', subscriptionRoutes);
 
 const server = http.createServer(app);
